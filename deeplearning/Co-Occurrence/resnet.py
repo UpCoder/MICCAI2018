@@ -234,53 +234,49 @@ def inference_small_config_pre(xs_expand, c, phase_names, xs_names=['ROI', 'EXPA
     CONV_OUT = None
     for xs_index, xs in enumerate(xs_expand):
         with tf.variable_scope(xs_names[xs_index]):
-            for index, phase_name in (enumerate(phase_names)):
-                c['ksize'] = ksize[xs_index]
-                x = xs[:, :, :, index]
-                x = tf.expand_dims(
-                    x,
-                    dim=3
-                )
-                with tf.variable_scope(phase_name):
-                    with tf.variable_scope('scale1'):
-                        c['conv_filters_out'] = 16
-                        c['block_filters_internal'] = 16
-                        c['stack_stride'] = 1
-                        x = conv(x, c)
-                        x = bn(x, c)
-                        x = activation(x)
-                        x = stack(x, c)
+            # for index, phase_name in (enumerate(phase_names)):
+            c['ksize'] = ksize[xs_index]
+            x = xs[:, :, :, :]
+            with tf.variable_scope(xs_names[xs_index]):
+                with tf.variable_scope('scale1'):
+                    c['conv_filters_out'] = 16
+                    c['block_filters_internal'] = 16
+                    c['stack_stride'] = 1
+                    x = conv(x, c)
+                    x = bn(x, c)
+                    x = activation(x)
+                    x = stack(x, c)
 
-                    with tf.variable_scope('scale2'):
-                        c['block_filters_internal'] = 32
-                        c['stack_stride'] = 2
-                        x = stack(x, c)
+                with tf.variable_scope('scale2'):
+                    c['block_filters_internal'] = 32
+                    c['stack_stride'] = 2
+                    x = stack(x, c)
 
-                    with tf.variable_scope('scale3'):
-                        c['block_filters_internal'] = 64
-                        c['stack_stride'] = 2
-                        x = stack(x, c)
-                    # post-net
-                    x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
+                with tf.variable_scope('scale3'):
+                    c['block_filters_internal'] = 64
+                    c['stack_stride'] = 2
+                    x = stack(x, c)
+                # post-net
+                x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
 
-                    if xs_index == 0:
-                        # local
-                        if local_output is None:
-                            local_output = x
-                        else:
-                            local_output = tf.concat([local_output, x], axis=1)
+                if xs_index == 0:
+                    # local
+                    if local_output is None:
+                        local_output = x
                     else:
-                        # global
-                        if global_output is None:
-                            global_output = x
-                        else:
-                            global_output = tf.concat([global_output, x], axis=1)
-
-                    if CONV_OUT is None:
-                        CONV_OUT = x
+                        local_output = tf.concat([local_output, x], axis=1)
+                else:
+                    # global
+                    if global_output is None:
+                        global_output = x
                     else:
-                        CONV_OUT = tf.concat([CONV_OUT, x], axis=1)
-                    print CONV_OUT
+                        global_output = tf.concat([global_output, x], axis=1)
+
+                if CONV_OUT is None:
+                    CONV_OUT = x
+                else:
+                    CONV_OUT = tf.concat([CONV_OUT, x], axis=1)
+                print CONV_OUT
 
     with tf.variable_scope('local_fc'):
         local_output = fc(local_output, c)
