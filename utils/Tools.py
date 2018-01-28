@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import pydicom
+import dicom as pydicom
 import os
 import SimpleITK as itk
 from PIL import Image, ImageDraw
@@ -22,6 +22,7 @@ def image_erode(image, size):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size))
     image = cv2.erode(image, kernel)
     return image
+
 
 # 调整窗宽 窗位
 def rejust_pixel_value(image):

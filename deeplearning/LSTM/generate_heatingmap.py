@@ -14,7 +14,7 @@ phasenames=['NC', 'ART', 'PV']
 mhd_adjust = False
 
 
-model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/1'
+model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0'
 divided_liver = False
 global_step = tf.get_variable('global_step', [],
                               initializer=tf.constant_initializer(0),
@@ -306,9 +306,8 @@ def generate_heatmap_version2(data_path, pointed_phase_index, patch_size, save_p
     save_mhd_image(new_mask_image, save_path)
 
 
-
 if __name__ == '__main__':
-    crossid = 1
+    crossid = 0
     for subclass in ['test', 'train', 'val']:
         sub_features = []
         sub_labels = []

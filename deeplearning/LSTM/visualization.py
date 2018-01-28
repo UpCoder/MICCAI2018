@@ -11,6 +11,8 @@ from PIL import Image
 from glob import glob
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('batch_size', net_config.BATCH_SIZE, "batch size")
+features = []
+
 
 def load_patch(patch_path, return_roi=False, parent_dir=None):
     if not return_roi:
@@ -123,7 +125,7 @@ def main(_):
     )
     batch_size_tensor = tf.placeholder(dtype=tf.int32, shape=[])
     is_training_tensor = tf.placeholder(dtype=tf.bool, shape=[])
-    logits, _, _, _ = inference_small(
+    logits, _, _, representor_tensor = inference_small(
         roi_images,
         expand_roi_images,
         phase_names=['NC', 'ART', 'PV'],
@@ -182,16 +184,27 @@ def main(_):
         #         cur_roi_images[i, :, :, j] = (1.0 * cur_roi_images[i, :, :, j]) / (1.0 * cur_liver_densitys[i][j])
         #         cur_expand_roi_images[i, :, :, j] = (1.0 * cur_expand_roi_images[i, :, :, j]) / (
         #         1.0 * cur_liver_densitys[i][j])
-        predicted_batch_labels = sess.run(predicted_label_tensor, feed_dict={
+        predicted_batch_labels, representor_value, logits_value = sess.run([predicted_label_tensor, representor_tensor, logits], feed_dict={
             roi_images: cur_roi_images,
             expand_roi_images: cur_expand_roi_images,
             is_training_tensor: False,
             batch_size_tensor: len(cur_roi_images)
         })
+        features.extend(representor_value)
         batch_labels = labels[start_index: end_index]
         predicted_labels.extend(predicted_batch_labels)
         start_index = end_index
         calculate_acc_error(predicted_batch_labels, batch_labels)
     calculate_acc_error(predicted_labels, labels)
+
+    # get the feature, visualize it
+    # first dimension reduction
+    from sklearn.decomposition import PCA
+    from plot import plot_scatter
+    pca_obj = PCA(n_components=2)
+    visualized_data = pca_obj.fit_transform(features)
+    plot_scatter(visualized_data[:, 0], visualized_data[:, 1], labels=labels, category_num=4)
+
+
 if __name__ == '__main__':
     tf.app.run()
