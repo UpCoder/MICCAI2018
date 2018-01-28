@@ -49,7 +49,7 @@ def main(_):
         num_classes=4,
         is_training=is_training_tensor
         )
-    save_model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0'
+    save_model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0'
     train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, roi_images, expand_roi_images,
           labels_tensor, is_training_tensor, save_model_path=save_model_path, step_width=100)
 

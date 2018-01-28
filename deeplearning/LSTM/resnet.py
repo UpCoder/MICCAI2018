@@ -218,9 +218,10 @@ def inference_small_config_bilstm(xs_expand, c, phase_names, xs_names=['ROI', 'E
     print 'after bw fc input is ', LSTM_OUTPUT
     if c['num_classes'] != None:
         print 'before fc layers, the dimension: ', outputs
-        with tf.variable_scope('fc-before'):
-            outputs = fc(outputs, c, 64)
-            outputs = activation(outputs)
+        # with tf.variable_scope('fc-before'):
+        #     outputs = fc(outputs, c, 64)
+        #     outputs = activation(outputs)
+        #     outputs = tf.nn.dropout(outputs, keep_prob=0.5)
         with tf.variable_scope('fc'):
             x = fc(outputs, c)
     print 'x is ', x
