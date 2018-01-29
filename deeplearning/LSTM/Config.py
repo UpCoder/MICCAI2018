@@ -10,7 +10,7 @@ class Config:
     OUTPUT_NODE = 5
     ITERATOE_NUMBER = int(1e+4)
     LEARNING_RATE = 1e-4
-    BATCH_SIZE = 100
+    BATCH_SIZE = 80
     DISTRIBUTION = [
         20,
         20,

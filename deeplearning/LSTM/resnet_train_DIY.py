@@ -19,7 +19,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0.001',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
@@ -306,7 +306,7 @@ class DataSet:
                 cur_rois_images = DataSet.resize_images(cur_rois_images, net_config.EXPAND_SIZE_W, self.rescale)
                 yield cur_patches_images, cur_rois_images, cur_labels
 
-_alpha = 0.1
+_alpha = 0.5
 category_num = 4
 
 def update_centers(centers, data, labels, category_num):
@@ -319,6 +319,7 @@ def update_centers(centers, data, labels, category_num):
     :return: 更新之后的centers
     '''
     centers = np.array(centers)
+    # print centers
     data = np.array(data)
     labels = np.asarray(labels, np.int32)
     centers_batch = centers[labels]
@@ -380,9 +381,10 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
         print 'represent_feature_tensor_shape is ', represent_feature_tensor_shape
         centers_value = np.zeros([category_num, represent_feature_tensor_shape[1]], dtype=np.float32)
         print 'centers_value shape is ', np.shape(centers_value)
-        centers_tensor = tf.get_variable('center_tensor', shape=[category_num, represent_feature_tensor_shape[1]],
+        centers_saved_tensor = tf.get_variable('center_tensor', shape=[category_num, represent_feature_tensor_shape[1]],
                                          initializer=tf.truncated_normal_initializer(stddev=CONV_WEIGHT_STDDEV),
                                          dtype=tf.float32, trainable=False)
+        centers_tensor = tf.placeholder(dtype=tf.float32, shape=[category_num, represent_feature_tensor_shape[1]])
         print 'center_tensor shape is ', tf.shape(centers_tensor)
         center_loss = calculate_centerloss(represent_feature_tensor, labels_tensor,
                                            centers_tensor=centers_tensor)
@@ -455,6 +457,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
             sys.exit(1)
         print "resume", latest
         saver.restore(sess, latest)
+        centers_value = sess.run(centers_saved_tensor)
 
     for x in xrange(FLAGS.max_steps + 1):
         start_time = time.time()
@@ -472,12 +475,12 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
             images_tensor: train_roi_batch_images,
             expand_images_tensor: train_expand_roi_batch_images,
             labels_tensor: train_labels,
-            # centers_tensor: centers_value,
+            centers_tensor: centers_value,
             is_training_tensor: True
         })
         if has_centerloss:
             centers_value = o[2]
-            centers_tensor = tf.convert_to_tensor(np.asarray(centers_value, np.float32), np.float32)
+            centers_saved_tensor = tf.convert_to_tensor(np.asarray(centers_value, np.float32), np.float32)
         loss_value = o[1]
 
         duration = time.time() - start_time
@@ -489,7 +492,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                 images_tensor: train_roi_batch_images,
                 expand_images_tensor: train_expand_roi_batch_images,
                 labels_tensor: train_labels,
-                # centers_tensor: centers_value,
+                centers_tensor: centers_value,
                 is_training_tensor: True
             })
             predictions_values = np.argmax(predictions_values, axis=1)
@@ -528,7 +531,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                 {
                     images_tensor: val_roi_batch_images,
                     expand_images_tensor: val_expand_roi_batch_images,
-                    # centers_tensor: centers_value,
+                    centers_tensor: centers_value,
                     labels_tensor: val_labels,
                     is_training_tensor: False
                 })
