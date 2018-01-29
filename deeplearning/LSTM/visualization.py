@@ -152,8 +152,8 @@ def main(_):
     print "resume", latest
     saver.restore(sess, latest)
 
-    data_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation/0/test'
-    slice_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/0/test'
+    data_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation/0/train'
+    slice_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/0/train'
     labels = []
     paths = []
     for typeid in [0, 1, 2, 3]:
