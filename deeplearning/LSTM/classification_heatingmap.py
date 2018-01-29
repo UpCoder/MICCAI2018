@@ -105,8 +105,8 @@ if __name__ == '__main__':
     # SVM
     predicted_label, c_params, g_params, accs = SVM.do(train_features, train_labels, val_features, val_labels,
                                                        adjust_parameters=True)
-
+    # use default parameters
     predicted_label, acc = SVM.do(train_features, train_labels, test_features, test_labels, adjust_parameters=False,
-                                  C=c_params, gamma=g_params)
+                                  C=1, gamma='auto')
     print 'ACC is ', acc
     calculate_acc_error(predicted_label, test_labels)

@@ -224,6 +224,7 @@ def inference_small_config_bilstm(xs_expand, c, phase_names, xs_names=['ROI', 'E
         #     outputs = tf.nn.dropout(outputs, keep_prob=0.5)
         with tf.variable_scope('fc'):
             x = fc(outputs, c)
+            x = tf.nn.dropout(x, keep_prob=0.5)
     print 'x is ', x
 
     return x, local_output, global_output, outputs
