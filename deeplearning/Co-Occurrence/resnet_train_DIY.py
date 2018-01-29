@@ -18,14 +18,14 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/Parallel/parameters/0',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
                            """The Summury output directory""")
 tf.app.flags.DEFINE_string('log_val_dir', './log/val',
                            """The Summury output directory""")
-tf.app.flags.DEFINE_float('learning_rate', 0.1, "learning rate.")
+tf.app.flags.DEFINE_float('learning_rate', 0.01, "learning rate.")
 tf.app.flags.DEFINE_integer('max_steps', 1000000, "max steps")
 tf.app.flags.DEFINE_boolean('resume', False,
                             'resume from latest saved state')
@@ -347,7 +347,7 @@ def calculate_centerloss(x_tensor, label_tensor, centers_tensor):
 
 
 def train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, images_tensor, expand_images_tensor, labels_tensor, is_training_tensor, save_model_path=None, step_width=100, record_loss=False):
-    cross_id = 0
+    cross_id = 1
     has_centerloss = False
     patches_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation'
     roi_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation'
@@ -411,7 +411,8 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
 
     tf.summary.scalar('learning_rate', FLAGS.learning_rate)
 
-    opt = tf.train.MomentumOptimizer(FLAGS.learning_rate, MOMENTUM)
+    # opt = tf.train.MomentumOptimizer(FLAGS.learning_rate, MOMENTUM)
+    opt = tf.train.AdamOptimizer(FLAGS.learning_rate)
     grads = opt.compute_gradients(loss_)
     for grad, var in grads:
         if grad is not None and not FLAGS.minimal_summaries:
