@@ -11,7 +11,8 @@ import sys
 loss_local_coefficient = 0.25
 loss_global_coefficient = 0.25
 loss_all_coefficient = 0.5
-_lambda = 0.0000
+_lambda = 0.0001
+has_centerloss = True
 MOMENTUM = 0.9
 
 FLAGS = tf.app.flags.FLAGS
@@ -27,7 +28,7 @@ tf.app.flags.DEFINE_string('log_val_dir', './log/val',
                            """The Summury output directory""")
 tf.app.flags.DEFINE_float('learning_rate', 0.01, "learning rate.")
 tf.app.flags.DEFINE_integer('max_steps', 1000000, "max steps")
-tf.app.flags.DEFINE_boolean('resume', True,
+tf.app.flags.DEFINE_boolean('resume', False,
                             'resume from latest saved state')
 tf.app.flags.DEFINE_boolean('minimal_summaries', True,
                             'produce fewer summaries to save HD space')
@@ -348,7 +349,6 @@ def calculate_centerloss(x_tensor, label_tensor, centers_tensor):
 
 def train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, images_tensor, expand_images_tensor, labels_tensor, is_training_tensor, save_model_path=None, step_width=100, record_loss=False):
     cross_id = 0
-    has_centerloss=True
     patches_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation'
     roi_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation'
     pre_load = True
