@@ -131,7 +131,7 @@ def main(_):
         is_training=is_training_tensor,
         batch_size=batch_size_tensor
         )
-    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0'
+    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0.0001'
     # model_path = '/home/give/PycharmProjects/MedicalImage/Net/forpatch/cross_validation/model/multiscale/parallel/0/2200.0'
     predictions = tf.nn.softmax(logits)
     saver = tf.train.Saver(tf.all_variables())

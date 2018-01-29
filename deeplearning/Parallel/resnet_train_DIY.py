@@ -11,7 +11,7 @@ import sys
 loss_local_coefficient = 0.25
 loss_global_coefficient = 0.25
 loss_all_coefficient = 0.5
-_lambda = 0.001
+_lambda = 0.0001
 MOMENTUM = 0.9
 
 FLAGS = tf.app.flags.FLAGS
@@ -348,7 +348,7 @@ def calculate_centerloss(x_tensor, label_tensor, centers_tensor):
 
 def train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, images_tensor, expand_images_tensor, labels_tensor, is_training_tensor, save_model_path=None, step_width=100, record_loss=False):
     cross_id = 0
-    has_centerloss = True
+    has_centerloss = False
     patches_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation'
     roi_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation'
     pre_load = True
@@ -470,7 +470,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
             images_tensor: train_roi_batch_images,
             expand_images_tensor: train_expand_roi_batch_images,
             labels_tensor: train_labels,
-            centers_tensor: centers_value,
+            # centers_tensor: centers_value,
             is_training_tensor: True
         })
         if has_centerloss:
@@ -486,7 +486,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                 images_tensor: train_roi_batch_images,
                 expand_images_tensor: train_expand_roi_batch_images,
                 labels_tensor: train_labels,
-                centers_tensor: centers_value,
+                # centers_tensor: centers_value,
                 is_training_tensor: True
             })
             predictions_values = np.argmax(predictions_values, axis=1)
@@ -525,7 +525,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                 {
                     images_tensor: val_roi_batch_images,
                     expand_images_tensor: val_expand_roi_batch_images,
-                    centers_tensor: centers_value,
+                    # centers_tensor: centers_value,
                     labels_tensor: val_labels,
                     is_training_tensor: False
                 })
