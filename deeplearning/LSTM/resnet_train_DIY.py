@@ -11,7 +11,7 @@ import sys
 loss_local_coefficient = 0.25
 loss_global_coefficient = 0.25
 loss_all_coefficient = 0.5
-_lambda = 0.0001
+_lambda = 0.001
 has_centerloss = True
 MOMENTUM = 0.9
 
@@ -26,7 +26,7 @@ tf.app.flags.DEFINE_string('log_dir', './log/train',
                            """The Summury output directory""")
 tf.app.flags.DEFINE_string('log_val_dir', './log/val',
                            """The Summury output directory""")
-tf.app.flags.DEFINE_float('learning_rate', 0.01, "learning rate.")
+tf.app.flags.DEFINE_float('learning_rate', 0.1, "learning rate.")
 tf.app.flags.DEFINE_integer('max_steps', 1000000, "max steps")
 tf.app.flags.DEFINE_boolean('resume', False,
                             'resume from latest saved state')
@@ -380,7 +380,9 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
         print 'represent_feature_tensor_shape is ', represent_feature_tensor_shape
         centers_value = np.zeros([category_num, represent_feature_tensor_shape[1]], dtype=np.float32)
         print 'centers_value shape is ', np.shape(centers_value)
-        centers_tensor = tf.placeholder(dtype=tf.float32, shape=[category_num, represent_feature_tensor_shape[1]])
+        centers_tensor = tf.get_variable('center_tensor', shape=[category_num, represent_feature_tensor_shape[1]],
+                                         initializer=tf.truncated_normal_initializer(stddev=CONV_WEIGHT_STDDEV),
+                                         dtype=tf.float32, trainable=False)
         print 'center_tensor shape is ', tf.shape(centers_tensor)
         center_loss = calculate_centerloss(represent_feature_tensor, labels_tensor,
                                            centers_tensor=centers_tensor)
@@ -470,11 +472,12 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
             images_tensor: train_roi_batch_images,
             expand_images_tensor: train_expand_roi_batch_images,
             labels_tensor: train_labels,
-            centers_tensor: centers_value,
+            # centers_tensor: centers_value,
             is_training_tensor: True
         })
         if has_centerloss:
             centers_value = o[2]
+            centers_tensor = tf.convert_to_tensor(np.asarray(centers_value, np.float32), np.float32)
         loss_value = o[1]
 
         duration = time.time() - start_time
@@ -486,7 +489,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                 images_tensor: train_roi_batch_images,
                 expand_images_tensor: train_expand_roi_batch_images,
                 labels_tensor: train_labels,
-                centers_tensor: centers_value,
+                # centers_tensor: centers_value,
                 is_training_tensor: True
             })
             predictions_values = np.argmax(predictions_values, axis=1)
@@ -525,7 +528,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                 {
                     images_tensor: val_roi_batch_images,
                     expand_images_tensor: val_expand_roi_batch_images,
-                    centers_tensor: centers_value,
+                    # centers_tensor: centers_value,
                     labels_tensor: val_labels,
                     is_training_tensor: False
                 })
