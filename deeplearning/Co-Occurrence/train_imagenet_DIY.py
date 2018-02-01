@@ -8,7 +8,7 @@ import re
 import numpy as np
 from resnet import inference_small
 from image_processing import image_preprocessing
-from deeplearning.LSTM.Config import Config as net_config
+from Config import Config as net_config
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('batch_size', net_config.BATCH_SIZE, "batch size")

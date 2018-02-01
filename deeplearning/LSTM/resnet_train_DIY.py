@@ -19,7 +19,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0.001',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/1/0.001',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
@@ -306,7 +306,7 @@ class DataSet:
                 cur_rois_images = DataSet.resize_images(cur_rois_images, net_config.EXPAND_SIZE_W, self.rescale)
                 yield cur_patches_images, cur_rois_images, cur_labels
 
-_alpha = 0.5
+_alpha = 0.2
 category_num = 4
 
 def update_centers(centers, data, labels, category_num):
@@ -373,7 +373,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
     loss_local = loss(local_output_tensor, labels_tensor)
     loss_global = loss(global_output_tensor, labels_tensor)
     loss_last = loss(logits, labels_tensor)
-    loss_inter = loss_local_coefficient * loss_local + loss_global_coefficient * loss_global * loss_all_coefficient * loss_last
+    loss_inter = loss_local_coefficient * loss_local + loss_global_coefficient * loss_global + loss_all_coefficient * loss_last
 
     # intra loss
     if has_centerloss:
@@ -488,20 +488,20 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
         assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
         if (step - 1) % step_width == 0:
-            top1_error_value, accuracy_value, labels_values, predictions_values = sess.run([top1_error, accuracy_tensor, labels_tensor, predictions], feed_dict={
-                images_tensor: train_roi_batch_images,
-                expand_images_tensor: train_expand_roi_batch_images,
-                labels_tensor: train_labels,
-                centers_tensor: centers_value,
-                is_training_tensor: True
-            })
-            predictions_values = np.argmax(predictions_values, axis=1)
+            accuracy_value, inter_loss_value, center_loss_value, labels_values, predictions_values = sess.run(
+                [accuracy_tensor, loss_inter, center_loss, labels_tensor, predictions], feed_dict={
+                    images_tensor: train_roi_batch_images,
+                    expand_images_tensor: train_expand_roi_batch_images,
+                    labels_tensor: train_labels,
+                    centers_tensor: centers_value,
+                    is_training_tensor: True
+                })
             examples_per_sec = FLAGS.batch_size / float(duration)
             # accuracy = eval_accuracy(predictions_values, labels_values)
-            format_str = ('step %d, loss = %.2f, top1 error = %g, accuracy value = %g  (%.1f examples/sec; %.3f '
+            format_str = ('step %d, loss = %.2f, inter_loss = %.5f, center_loss =%.5f, accuracy value = %g  (%.1f examples/sec; %.3f '
                           'sec/batch)')
 
-            print(format_str % (step, loss_value, top1_error_value, accuracy_value, examples_per_sec, duration))
+            print(format_str % (step, loss_value, inter_loss_value, center_loss_value, accuracy_value, examples_per_sec, duration))
         if write_summary:
             if has_centerloss:
                 summary_str = o[3]

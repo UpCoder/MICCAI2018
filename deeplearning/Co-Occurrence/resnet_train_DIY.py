@@ -1,7 +1,7 @@
 # -*- coding=utf-8 -*-
 from resnet import *
 import tensorflow as tf
-from utils.Tools import changed_shape, calculate_acc_error, acc_binary_acc, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
+from utils.Tools import calculate_acc_error, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
 from glob import glob
 import shutil
 import scipy.io as scio
@@ -372,7 +372,9 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
     loss_local = loss(local_output_tensor, labels_tensor)
     loss_global = loss(global_output_tensor, labels_tensor)
     loss_last = loss(logits, labels_tensor)
-    loss_inter = loss_local_coefficient * loss_local + loss_global_coefficient * loss_global * loss_all_coefficient * loss_last
+    loss_inter = loss_local_coefficient * loss_local + \
+                 loss_global_coefficient * loss_global + \
+                 loss_all_coefficient * loss_last
 
     # intra loss
     if has_centerloss:

@@ -133,7 +133,7 @@ def main(_):
         is_training=is_training_tensor,
         batch_size=batch_size_tensor
         )
-    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0'
+    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0.0001'
     # model_path = '/home/give/PycharmProjects/MedicalImage/Net/forpatch/cross_validation/model/multiscale/parallel/0/2200.0'
     predictions = tf.nn.softmax(logits)
     saver = tf.train.Saver(tf.all_variables())
@@ -202,6 +202,15 @@ def main(_):
     from sklearn.decomposition import PCA
     dim = 2
     from plot import plot_scatter, plot_scatter3D
+    pca_obj = PCA(n_components=dim)
+    visualized_data = pca_obj.fit_transform(features)
+    if dim == 3:
+        plot_scatter3D(visualized_data[:, 0], visualized_data[:, 1], visualized_data[:, 2], labels=labels,
+                       category_num=4)
+    else:
+        plot_scatter(visualized_data[:, 0], visualized_data[:, 1], labels=labels, category_num=4)
+
+    dim = 3
     pca_obj = PCA(n_components=dim)
     visualized_data = pca_obj.fit_transform(features)
     if dim == 3:
