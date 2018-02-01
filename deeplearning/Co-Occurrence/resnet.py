@@ -102,7 +102,7 @@ def inference_small(x, x_expand,
     c['fc_units_out'] = num_classes
     c['num_blocks'] = num_blocks
     c['num_classes'] = num_classes
-    return inference_small_config_pre([x, x_expand], c, phase_names, batch_size=batch_size)
+    return inference_small_config_pre([x, x_expand], c, phase_names, batch_size=batch_size, co_occurrence=True)
 
 
 def inference_small_config_bilstm(xs_expand, c, phase_names, xs_names=['ROI', 'EXPAND'], batch_size=None, ksize=[3, 3]):
@@ -226,73 +226,67 @@ def inference_small_config_bilstm(xs_expand, c, phase_names, xs_names=['ROI', 'E
 
 
 # ConvNet->reduce_mean->concat->FC
-def inference_small_config_pre(xs_expand, c, phase_names, xs_names=['ROI', 'EXPAND'], batch_size=None,ksize=[3, 3]):
+# ConvNet->reduce_mean->concat->FC
+def inference_small_config_pre(xs_expand, c, phase_names, co_occurrence=False, xs_names=['Patch', 'ROI'], batch_size=None,ksize=[3, 3], pointed_phase=[0, 1, 2]):
     c['bottleneck'] = False
     c['stride'] = 1
-    local_output = None
-    global_output = None
     CONV_OUT = None
+    result = []
     for xs_index, xs in enumerate(xs_expand):
         with tf.variable_scope(xs_names[xs_index]):
-            # for index, phase_name in (enumerate(phase_names)):
-            c['ksize'] = ksize[xs_index]
-            x = xs[:, :, :, :]
-            with tf.variable_scope(xs_names[xs_index]):
-                with tf.variable_scope('scale1'):
-                    c['conv_filters_out'] = 16
-                    c['block_filters_internal'] = 16
-                    c['stack_stride'] = 1
-                    x = conv(x, c)
-                    x = bn(x, c)
-                    x = activation(x)
-                    x = stack(x, c)
-
-                with tf.variable_scope('scale2'):
-                    c['block_filters_internal'] = 32
-                    c['stack_stride'] = 2
-                    x = stack(x, c)
-
-                with tf.variable_scope('scale3'):
-                    c['block_filters_internal'] = 64
-                    c['stack_stride'] = 2
-                    x = stack(x, c)
-                # post-net
-                x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
-
-                if xs_index == 0:
-                    # local
-                    if local_output is None:
-                        local_output = x
-                    else:
-                        local_output = tf.concat([local_output, x], axis=1)
+            for index, phase_name in (enumerate(phase_names)):
+                c['ksize'] = ksize[xs_index]
+                if not co_occurrence:
+                    # parallel的情况，可以任意的选择phase的个数
+                    if index not in pointed_phase:
+                        continue
+                    x = xs[:, :, :, index]
+                    x = tf.expand_dims(
+                        x,
+                        dim=3
+                    )
                 else:
-                    # global
-                    if global_output is None:
-                        global_output = x
+
+                    if index != 0:
+                        # 共生的情况下，我们只需要计算一次即可
+                        continue
+                    x = xs
+                print 'x tensor: ', x
+                with tf.variable_scope(phase_name):
+                    with tf.variable_scope('scale1'):
+                        c['conv_filters_out'] = 16
+                        c['block_filters_internal'] = 16
+                        c['stack_stride'] = 1
+                        x = conv(x, c)
+                        x = bn(x, c)
+                        x = activation(x)
+                        x = stack(x, c)
+
+                    with tf.variable_scope('scale2'):
+                        c['block_filters_internal'] = 32
+                        c['stack_stride'] = 2
+                        x = stack(x, c)
+
+                    with tf.variable_scope('scale3'):
+                        c['block_filters_internal'] = 64
+                        c['stack_stride'] = 2
+                        x = stack(x, c)
+                    # post-net
+                    x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
+                    with tf.variable_scope(xs_names[xs_index] + 'fc'):
+                        result.append(fc(x, c))
+                    if CONV_OUT is None:
+                        CONV_OUT = x
                     else:
-                        global_output = tf.concat([global_output, x], axis=1)
-
-                if CONV_OUT is None:
-                    CONV_OUT = x
-                else:
-                    CONV_OUT = tf.concat([CONV_OUT, x], axis=1)
-                print CONV_OUT
-
-    with tf.variable_scope('local_fc'):
-        local_output = fc(local_output, c)
-    with tf.variable_scope('global_fc'):
-        global_output = fc(global_output, c)
-
+                        CONV_OUT = tf.concat([CONV_OUT, x], axis=1)
+                    print CONV_OUT
     print 'final fc input is ', CONV_OUT
     if c['num_classes'] != None:
         print 'before fc layers, the dimension: ', CONV_OUT
-        with tf.variable_scope('fc-before'):
-            CONV_OUT = fc(CONV_OUT, c, 64)
-            CONV_OUT = activation(CONV_OUT)
-            CONV_OUT = tf.nn.dropout(CONV_OUT, keep_prob=0.5)
         with tf.variable_scope('fc'):
             x = fc(CONV_OUT, c)
-    return x, local_output, global_output, CONV_OUT
+            result.append(x)
+    return result[2], result[0], result[1], CONV_OUT
 
 
 def _imagenet_preprocess(rgb):

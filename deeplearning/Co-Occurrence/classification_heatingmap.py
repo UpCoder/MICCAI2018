@@ -91,15 +91,15 @@ if __name__ == '__main__':
     import scipy.io as scio
     from utils.classification import SVM, KNN
 
-    train_data = scio.loadmat('./features/crossvalidation/0/train.npy.mat')
+    train_data = scio.loadmat('./features/crossvalidation/1/train.npy.mat')
     train_features = train_data['features']
     train_labels = train_data['labels']
 
-    val_data = scio.loadmat('./features/crossvalidation/0/val.npy.mat')
+    val_data = scio.loadmat('./features/crossvalidation/1/val.npy.mat')
     val_features = val_data['features']
     val_labels = val_data['labels']
 
-    test_data = scio.loadmat('./features/crossvalidation/0/test.npy.mat')
+    test_data = scio.loadmat('./features/crossvalidation/1/test.npy.mat')
     test_features = test_data['features']
     test_labels = test_data['labels']
     # SVM
@@ -107,6 +107,6 @@ if __name__ == '__main__':
                                                        adjust_parameters=True)
 
     predicted_label, acc = SVM.do(train_features, train_labels, test_features, test_labels, adjust_parameters=False,
-                                  C=c_params, gamma=g_params)
+                                  C=1, gamma='auto')
     print 'ACC is ', acc
     calculate_acc_error(predicted_label, test_labels)
