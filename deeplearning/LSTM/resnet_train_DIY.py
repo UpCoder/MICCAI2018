@@ -11,7 +11,7 @@ import sys
 loss_local_coefficient = 0.25
 loss_global_coefficient = 0.25
 loss_all_coefficient = 0.5
-_lambda = 0.001
+_lambda = 0.1
 has_centerloss = True
 MOMENTUM = 0.9
 
@@ -19,7 +19,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/1/0.001',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0.1',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
