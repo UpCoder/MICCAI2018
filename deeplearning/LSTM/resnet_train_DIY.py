@@ -1,7 +1,7 @@
 # -*- coding=utf-8 -*-
 from resnet import *
 import tensorflow as tf
-from utils.Tools import changed_shape, calculate_acc_error, acc_binary_acc, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
+from utils.Tools import calculate_acc_error, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
 from glob import glob
 import shutil
 import scipy.io as scio
@@ -11,7 +11,9 @@ import sys
 loss_local_coefficient = 0.25
 loss_global_coefficient = 0.25
 loss_all_coefficient = 0.5
-_lambda = 0.001
+_lambda = 0.0001
+_alpha = 0.1
+category_num = 4
 has_centerloss = True
 MOMENTUM = 0.9
 
@@ -19,7 +21,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/1/0.001',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM/parameters/0/0.1',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
@@ -28,7 +30,7 @@ tf.app.flags.DEFINE_string('log_val_dir', './log/val',
                            """The Summury output directory""")
 tf.app.flags.DEFINE_float('learning_rate', 0.01, "learning rate.")
 tf.app.flags.DEFINE_integer('max_steps', 1000000, "max steps")
-tf.app.flags.DEFINE_boolean('resume', True,
+tf.app.flags.DEFINE_boolean('resume', False,
                             'resume from latest saved state')
 tf.app.flags.DEFINE_boolean('minimal_summaries', True,
                             'produce fewer summaries to save HD space')
@@ -306,8 +308,6 @@ class DataSet:
                 cur_rois_images = DataSet.resize_images(cur_rois_images, net_config.EXPAND_SIZE_W, self.rescale)
                 yield cur_patches_images, cur_rois_images, cur_labels
 
-_alpha = 0.2
-category_num = 4
 
 def update_centers(centers, data, labels, category_num):
     '''
