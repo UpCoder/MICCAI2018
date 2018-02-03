@@ -1,7 +1,7 @@
 # -*- coding=utf-8 -*-
 from resnet import *
 import tensorflow as tf
-from utils.Tools import calculate_acc_error, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
+from utils.Tools import changed_shape, calculate_acc_error, acc_binary_acc, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
 from glob import glob
 import shutil
 import scipy.io as scio
@@ -11,14 +11,15 @@ import sys
 loss_local_coefficient = 0.0
 loss_global_coefficient = 0.0
 loss_all_coefficient = 1.0
-_lambda = 0.0001
+_lambda = 0.001
+has_centerloss = True
 MOMENTUM = 0.9
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM_OnlyPatch/parameters/1',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
@@ -305,7 +306,7 @@ class DataSet:
                 cur_rois_images = DataSet.resize_images(cur_rois_images, net_config.EXPAND_SIZE_W, self.rescale)
                 yield cur_patches_images, cur_rois_images, cur_labels
 
-_alpha = 0.1
+_alpha = 0.2
 category_num = 4
 
 def update_centers(centers, data, labels, category_num):
@@ -318,6 +319,7 @@ def update_centers(centers, data, labels, category_num):
     :return: 更新之后的centers
     '''
     centers = np.array(centers)
+    # print centers
     data = np.array(data)
     labels = np.asarray(labels, np.int32)
     centers_batch = centers[labels]
@@ -346,18 +348,17 @@ def calculate_centerloss(x_tensor, label_tensor, centers_tensor):
     return loss
 
 
-def train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, images_tensor, expand_images_tensor, labels_tensor, is_training_tensor, save_model_path=None, step_width=100, record_loss=False):
-    cross_id = 0
-    has_centerloss = True
+def train(logits, represent_feature_tensor, images_tensor, expand_images_tensor, labels_tensor, is_training_tensor, save_model_path=None, step_width=100, record_loss=False):
+    cross_id = 1
     patches_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation'
     roi_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation'
     pre_load = True
     train_dataset = DataSet(os.path.join(patches_dir, str(cross_id), 'train'), 'train', pre_load=pre_load,
                             rescale=True, divied_liver=False, expand_is_roi=True,
                             full_roi_path=os.path.join(roi_dir, str(cross_id), 'train'))
-    val_dataset = DataSet(os.path.join(patches_dir, str(cross_id), 'val'), 'val', pre_load=pre_load,
+    val_dataset = DataSet(os.path.join(patches_dir, str(cross_id), 'test'), 'test', pre_load=pre_load,
                           rescale=True, divied_liver=False, expand_is_roi=True,
-                          full_roi_path=os.path.join(roi_dir, str(cross_id), 'val'))
+                          full_roi_path=os.path.join(roi_dir, str(cross_id), 'test'))
 
     train_batchdata = train_dataset.get_next_batch(net_config.BATCH_SIZE)
     val_batchdata = val_dataset.get_next_batch(net_config.BATCH_SIZE)
@@ -369,12 +370,8 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
                                   initializer=tf.constant_initializer(0),
                                   trainable=False)
     # inter loss
-    loss_local = loss(local_output_tensor, labels_tensor)
-    loss_global = loss(global_output_tensor, labels_tensor)
     loss_last = loss(logits, labels_tensor)
-    loss_inter = loss_local_coefficient * loss_local + \
-                 loss_global_coefficient * loss_global + \
-                 loss_all_coefficient * loss_last
+    loss_inter = loss_last
 
     # intra loss
     if has_centerloss:
@@ -382,6 +379,9 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
         print 'represent_feature_tensor_shape is ', represent_feature_tensor_shape
         centers_value = np.zeros([category_num, represent_feature_tensor_shape[1]], dtype=np.float32)
         print 'centers_value shape is ', np.shape(centers_value)
+        centers_saved_tensor = tf.get_variable('center_tensor', shape=[category_num, represent_feature_tensor_shape[1]],
+                                         initializer=tf.truncated_normal_initializer(stddev=CONV_WEIGHT_STDDEV),
+                                         dtype=tf.float32, trainable=False)
         centers_tensor = tf.placeholder(dtype=tf.float32, shape=[category_num, represent_feature_tensor_shape[1]])
         print 'center_tensor shape is ', tf.shape(centers_tensor)
         center_loss = calculate_centerloss(represent_feature_tensor, labels_tensor,
@@ -413,8 +413,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
 
     tf.summary.scalar('learning_rate', FLAGS.learning_rate)
 
-    # opt = tf.train.MomentumOptimizer(FLAGS.learning_rate, MOMENTUM)
-    opt = tf.train.AdamOptimizer(FLAGS.learning_rate)
+    opt = tf.train.MomentumOptimizer(FLAGS.learning_rate, MOMENTUM)
     grads = opt.compute_gradients(loss_)
     for grad, var in grads:
         if grad is not None and not FLAGS.minimal_summaries:
@@ -456,6 +455,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
             sys.exit(1)
         print "resume", latest
         saver.restore(sess, latest)
+        centers_value = sess.run(centers_saved_tensor)
 
     for x in xrange(FLAGS.max_steps + 1):
         start_time = time.time()
@@ -478,6 +478,7 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
         })
         if has_centerloss:
             centers_value = o[2]
+            centers_saved_tensor = tf.convert_to_tensor(np.asarray(centers_value, np.float32), np.float32)
         loss_value = o[1]
 
         duration = time.time() - start_time
@@ -485,17 +486,18 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
         assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
         if (step - 1) % step_width == 0:
-            inter_loss_value, center_loss_value, accuracy_value, labels_values, predictions_values = sess.run([loss_inter, center_loss, accuracy_tensor, labels_tensor, predictions], feed_dict={
-                images_tensor: train_roi_batch_images,
-                expand_images_tensor: train_expand_roi_batch_images,
-                labels_tensor: train_labels,
-                centers_tensor: centers_value,
-                is_training_tensor: True
-            })
+            accuracy_value, inter_loss_value, center_loss_value, labels_values, predictions_values = sess.run(
+                [accuracy_tensor, loss_inter, center_loss, labels_tensor, predictions], feed_dict={
+                    images_tensor: train_roi_batch_images,
+                    expand_images_tensor: train_expand_roi_batch_images,
+                    labels_tensor: train_labels,
+                    centers_tensor: centers_value,
+                    is_training_tensor: True
+                })
             examples_per_sec = FLAGS.batch_size / float(duration)
-            format_str = (
-            'step %d, loss = %.2f, inter loss value = %.5f, center loss value = %.5f  accuracy value = %g  (%.1f examples/sec; %.3f '
-            'sec/batch)')
+            # accuracy = eval_accuracy(predictions_values, labels_values)
+            format_str = ('step %d, loss = %.2f, inter_loss = %.5f, center_loss =%.5f, accuracy value = %g  (%.1f examples/sec; %.3f '
+                          'sec/batch)')
 
             print(format_str % (step, loss_value, inter_loss_value, center_loss_value, accuracy_value, examples_per_sec, duration))
         if write_summary:
@@ -541,5 +543,3 @@ def train(logits, local_output_tensor, global_output_tensor, represent_feature_t
             print('Validation top1 error %.2f, accuracy value %f'
                   % (top1_error_value, accuracy_value))
             val_summary_writer.add_summary(summary_value, step)
-            # if has_centerloss:
-            #    print centers_value

@@ -123,7 +123,7 @@ def main(_):
     )
     batch_size_tensor = tf.placeholder(dtype=tf.int32, shape=[])
     is_training_tensor = tf.placeholder(dtype=tf.bool, shape=[])
-    logits, _, _, _ = inference_small(
+    logits, _, _ = inference_small(
         roi_images,
         expand_roi_images,
         phase_names=['NC', 'ART', 'PV'],
@@ -131,7 +131,7 @@ def main(_):
         is_training=is_training_tensor,
         batch_size=batch_size_tensor
         )
-    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0'
+    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM_OnlyPatch/parameters/1'
     # model_path = '/home/give/PycharmProjects/MedicalImage/Net/forpatch/cross_validation/model/multiscale/parallel/0/2200.0'
     predictions = tf.nn.softmax(logits)
     saver = tf.train.Saver(tf.all_variables())
@@ -150,8 +150,8 @@ def main(_):
     print "resume", latest
     saver.restore(sess, latest)
 
-    data_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation/0/test'
-    slice_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/0/test'
+    data_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation/1/test'
+    slice_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/test'
     labels = []
     paths = []
     for typeid in [0, 1, 2, 3]:
@@ -175,8 +175,8 @@ def main(_):
             cur_paths]
         cur_roi_images = resize_images(cur_roi_images, net_config.ROI_SIZE_W, True)
         cur_expand_roi_images = resize_images(cur_expand_roi_images, net_config.EXPAND_SIZE_W, True)
-        cur_liver_densitys = [liver_density[os.path.basename(path)[:os.path.basename(path).rfind('_')]] for
-                              path in cur_paths]
+        # cur_liver_densitys = [liver_density[os.path.basename(path)[:os.path.basename(path).rfind('_')]] for
+        #                       path in cur_paths]
         # for i in range(len(cur_roi_images)):
         #     for j in range(3):
         #         cur_roi_images[i, :, :, j] = (1.0 * cur_roi_images[i, :, :, j]) / (1.0 * cur_liver_densitys[i][j])

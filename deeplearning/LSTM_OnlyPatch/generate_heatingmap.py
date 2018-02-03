@@ -14,7 +14,7 @@ phasenames=['NC', 'ART', 'PV']
 mhd_adjust = False
 
 
-model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0'
+model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM_OnlyPatch/parameters/1'
 divided_liver = False
 global_step = tf.get_variable('global_step', [],
                               initializer=tf.constant_initializer(0),
@@ -44,7 +44,7 @@ batch_size_tensor = tf.placeholder(
     tf.int32,
     []
 )
-logits, _, _, _ = inference_small(
+logits, _, _ = inference_small(
     roi_images,
     expand_roi_images,
     phase_names=['NC', 'ART', 'PV'],
@@ -307,7 +307,7 @@ def generate_heatmap_version2(data_path, pointed_phase_index, patch_size, save_p
 
 
 if __name__ == '__main__':
-    crossid = 0
+    crossid = 1
     for subclass in ['test', 'train', 'val']:
         sub_features = []
         sub_labels = []
@@ -317,7 +317,7 @@ if __name__ == '__main__':
                 type,
                 8,
                 os.path.join(
-                    '/home/give/Documents/dataset/MICCAI2018/Heatingmap/Co-Occurrence/crossvalidation/' + str(crossid),
+                    '/home/give/Documents/dataset/MICCAI2018/Heatingmap/LSTM_onlypatch/crossvalidation/' + str(crossid),
                     subclass
                 )
             )

@@ -102,35 +102,28 @@ def inference_small(x, x_expand,
     c['fc_units_out'] = num_classes
     c['num_blocks'] = num_blocks
     c['num_classes'] = num_classes
-    return inference_small_config_pre([x, x_expand], c, phase_names, batch_size=batch_size, co_occurrence=True)
+    return inference_small_config_bilstm([x, x_expand], c, phase_names, batch_size=batch_size)
 
 
-# ConvNet->reduce_mean->concat->FC
-def inference_small_config_pre(xs_expand, c, phase_names, co_occurrence=False, xs_names=['Patch', 'ROI'], batch_size=None,ksize=[3, 3], pointed_phase=[0, 1, 2]):
+def inference_small_config_bilstm(xs_expand, c, phase_names, xs_names=['ROI', 'EXPAND'], batch_size=None, ksize=[3, 3]):
     c['bottleneck'] = False
     c['stride'] = 1
-    CONV_OUT = None
-    result = []
+    CONV_OUT = []
+    CONV_OUT_index = 0
+    local_output = None
+    global_output = None
+    NUM_LAYERS = 2
     for xs_index, xs in enumerate(xs_expand):
+        if xs_index != 0:
+            continue
         with tf.variable_scope(xs_names[xs_index]):
             for index, phase_name in (enumerate(phase_names)):
                 c['ksize'] = ksize[xs_index]
-                if not co_occurrence:
-                    # parallel的情况，可以任意的选择phase的个数
-                    if index not in pointed_phase:
-                        continue
-                    x = xs[:, :, :, index]
-                    x = tf.expand_dims(
-                        x,
-                        dim=3
-                    )
-                else:
-
-                    if index != 0:
-                        # 共生的情况下，我们只需要计算一次即可
-                        continue
-                    x = xs
-                print 'x tensor: ', x
+                x = xs[:, :, :, index]
+                x = tf.expand_dims(
+                    x,
+                    dim=3
+                )
                 with tf.variable_scope(phase_name):
                     with tf.variable_scope('scale1'):
                         c['conv_filters_out'] = 16
@@ -152,21 +145,88 @@ def inference_small_config_pre(xs_expand, c, phase_names, co_occurrence=False, x
                         x = stack(x, c)
                     # post-net
                     x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
-                    with tf.variable_scope(xs_names[xs_index] + 'fc'):
-                        result.append(fc(x, c))
-                    if CONV_OUT is None:
-                        CONV_OUT = x
+                    if xs_index == 0:
+                        # local
+                        if local_output is None:
+                            local_output = x
+                        else:
+                            local_output = tf.concat([local_output, x], axis=1)
                     else:
-                        CONV_OUT = tf.concat([CONV_OUT, x], axis=1)
+                        # global
+                        if global_output is None:
+                            global_output = x
+                        else:
+                            global_output = tf.concat([global_output, x], axis=1)
+                    CONV_OUT.append(x)
+                    CONV_OUT_index += 1
                     print CONV_OUT
-    print 'final fc input is ', CONV_OUT
+
+    with tf.variable_scope('local_fc'):
+        local_output = fc(local_output, c)
+
+    HIDDEN_SIZE = CONV_OUT[0].get_shape().as_list()[1]
+    lstm_cell_fw = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
+    fw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell_fw] * NUM_LAYERS)
+    if batch_size is None:
+        initial_state = fw_cell.zero_state(xs_expand[0].get_shape().as_list()[0], tf.float32)
+    else:
+        initial_state = fw_cell.zero_state(batch_size, tf.float32)
+    state = initial_state
+    outputs_fw = []
+    with tf.variable_scope('RNN_LSTM_FW'):
+        for time_step in range(len(CONV_OUT)):
+            if time_step > 0:
+                tf.get_variable_scope().reuse_variables()
+            print CONV_OUT[time_step]
+            print state
+            cell_output, state = fw_cell(CONV_OUT[time_step], state)
+            outputs_fw.append(cell_output)
+
+    lstm_cell_bw = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
+    bw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell_bw] * NUM_LAYERS)
+    if batch_size is None:
+        initial_state = fw_cell.zero_state(xs_expand[0].get_shape().as_list()[0], tf.float32)
+    else:
+        initial_state = fw_cell.zero_state(batch_size, tf.float32)
+    state = initial_state
+    outputs_bw = []
+    with tf.variable_scope('RNN_LSTM_BW'):
+        for time_step in range(len(CONV_OUT)):
+            if time_step > 0:
+                tf.get_variable_scope().reuse_variables()
+            print CONV_OUT[time_step]
+            print state
+            cell_output, state = bw_cell(CONV_OUT[len(CONV_OUT) - time_step - 1], state)
+            outputs_bw.append(cell_output)
+
+    LSTM_OUTPUT = None
+    for i in range(len(outputs_fw)):
+        if LSTM_OUTPUT is None:
+            LSTM_OUTPUT = outputs_fw[i]
+        else:
+            LSTM_OUTPUT = tf.concat([LSTM_OUTPUT, outputs_fw[i]], axis=1)
+    print 'after fw fc input is ', LSTM_OUTPUT
+
+    for i in range(len(outputs_bw)):
+        if LSTM_OUTPUT is None:
+            LSTM_OUTPUT = outputs_bw[i]
+        else:
+            LSTM_OUTPUT = tf.concat([LSTM_OUTPUT, outputs_bw[i]], axis=1)
+
+    # outputs = outputs[-1]   # 只需要最后的输出即可？
+    outputs = LSTM_OUTPUT
+    print 'after bw fc input is ', LSTM_OUTPUT
     if c['num_classes'] != None:
-        print 'before fc layers, the dimension: ', CONV_OUT
+        print 'before fc layers, the dimension: ', outputs
+        # with tf.variable_scope('fc-before'):
+        #     outputs = fc(outputs, c, 64)
+        #     outputs = activation(outputs)
+        #     outputs = tf.nn.dropout(outputs, keep_prob=0.5)
         with tf.variable_scope('fc'):
-            x = fc(CONV_OUT, c)
+            x = fc(outputs, c)
             # x = tf.nn.dropout(x, keep_prob=0.8)
-            result.append(x)
-    return result[2], result[0], result[1], CONV_OUT
+    print 'x is ', x
+    return x, local_output, outputs
 
 
 def _imagenet_preprocess(rgb):
@@ -320,7 +380,6 @@ def bn(x, c):
 
     return x
 
-
 def fc(x, c, node_num=None):
     num_units_in = x.get_shape()[1]
     if node_num is None:
@@ -397,7 +456,7 @@ if __name__ == '__main__':
     c['fc_units_out'] = 4
     c['num_blocks'] = num_blocks
     c['num_classes'] = 4
-    logits, local_output, global_output, represent_feature = inference_small_config_pre([roi_tensor, expand_tensor],
+    logits, local_output, global_output, represent_feature = inference_small_config_bilstm([roi_tensor, expand_tensor],
                                                                                            c, ['NC', 'ART', 'PV'])
     print 'logits is ', logits
     print 'local output is ', local_output

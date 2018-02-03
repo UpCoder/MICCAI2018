@@ -8,7 +8,7 @@ import re
 import numpy as np
 from resnet import inference_small
 from image_processing import image_preprocessing
-from Config import Config as net_config
+from deeplearning.LSTM.Config import Config as net_config
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('batch_size', net_config.BATCH_SIZE, "batch size")
@@ -42,15 +42,15 @@ def main(_):
         dtype=np.int32
     )
     is_training_tensor = tf.placeholder(dtype=tf.bool, shape=[])
-    logits, local_output_tensor, global_output_tensor, represent_feature_tensor = inference_small(
+    logits, local_output_tensor, represent_feature_tensor = inference_small(
         roi_images,
         expand_roi_images,
         phase_names=['NC', 'ART', 'PV'],
         num_classes=4,
         is_training=is_training_tensor
         )
-    save_model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0'
-    train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, roi_images, expand_roi_images,
+    save_model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/LSTM_OnlyPatch/parameters/1'
+    train(logits, represent_feature_tensor, roi_images, expand_roi_images,
           labels_tensor, is_training_tensor, save_model_path=save_model_path, step_width=100)
 
 if __name__ == '__main__':
