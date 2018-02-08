@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     import scipy.io as scio
     from utils.classification import SVM, KNN
-    crossid = 0
+    crossid = 1
     train_data = scio.loadmat('./features/crossvalidation/' + str(crossid) + '/train.npy.mat')
     train_features = train_data['features']
     train_labels = train_data['labels']

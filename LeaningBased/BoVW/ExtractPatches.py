@@ -7,25 +7,25 @@ from multiprocessing import Pool
 import scipy.io as scio
 
 
-def read_from_dir(data_dir, phasename='PV'):
-    mhd_path = glob(os.path.join(data_dir, phasename + '_Image*.mhd'))[0]
+def read_from_dir(data_dir, phase_name):
+    mhd_path = glob(os.path.join(data_dir, phase_name + '_Image*.mhd'))[0]
     mhd_image = read_mhd_image(mhd_path)
-    mask_path = os.path.join(data_dir, phasename + '_Registration.mhd')
+    mask_path = os.path.join(data_dir, phase_name + '_Registration.mhd')
     mask_image = read_mhd_image(mask_path)
     mhd_image = np.squeeze(mhd_image)
     mask_image = np.squeeze(mask_image)
     return mask_image, mhd_image
 
 
-def convert_coding(file_dir):
-    pv_mask_image, pv_mhd_image = read_from_dir(file_dir)
+def convert_coding(file_dir, phase_name):
+    pv_mask_image, pv_mhd_image = read_from_dir(file_dir, phase_name=phase_name)
     [x_min, x_max, y_min, y_max] = get_boundingbox(pv_mask_image)
     roi_image = pv_mhd_image[x_min:x_max, y_min: y_max]
     after_conding = local_binary_pattern(roi_image, 8, 3, 'uniform')
     return after_conding
 
 
-def extract_patches_multifiles(data_dir, names, target_label, patch_size, patch_step, save_dir):
+def extract_patches_multifiles(data_dir, names, target_label, patch_size, patch_step, save_dir, phase_name):
     patches = []
     labeles = []
     coding_labeles = []
@@ -34,8 +34,8 @@ def extract_patches_multifiles(data_dir, names, target_label, patch_size, patch_
             continue
         cur_data_dir = os.path.join(data_dir, name)
         print 'extract patches from ', cur_data_dir, ' at ', str(os.getpid())
-        pv_mask_image, pv_mhd_image = read_from_dir(cur_data_dir)
-        coding_image = convert_coding(cur_data_dir)
+        pv_mask_image, pv_mhd_image = read_from_dir(cur_data_dir, phase_name=phase_name)
+        coding_image = convert_coding(cur_data_dir, phase_name=phase_name)
         [x_min, x_max, y_min, y_max] = get_boundingbox(pv_mask_image)
         r = patch_size / 2
         cur_patches = []
@@ -71,21 +71,21 @@ def extract_patches_multifiles(data_dir, names, target_label, patch_size, patch_
     return patches, coding_labeles, labeles
 
 
-def extract_patches_singledir(data_dir, target_label, patch_size, patch_step, save_dir, multiprocess=8):
+def extract_patches_singledir(data_dir, target_label, patch_size, patch_step, phase_name, multiprocess=8):
     names = os.listdir(data_dir)
     patches = []
     labeles = []
     coding_labeles = []
     if multiprocess is None:
         patches, coding_labeles, labeles = extract_patches_multifiles(data_dir, names, target_label, patch_size,
-                                                                      patch_step, None)
+                                                                      patch_step, None, phase_name=phase_name)
     else:
         names_group = split_array(names, multiprocess)
         pool = Pool()
         results = []
         for i in range(multiprocess):
             result = pool.apply_async(extract_patches_multifiles,
-                                      (data_dir, names_group[i], target_label, patch_size, patch_step, None,))
+                                      (data_dir, names_group[i], target_label, patch_size, patch_step, None, phase_name, ))
             results.append(result)
         pool.close()
         pool.join()
@@ -99,7 +99,7 @@ def extract_patches_singledir(data_dir, target_label, patch_size, patch_step, sa
 
 
 def extract_patches_multidir(data_dir, subclasses=['train', 'val', 'test'], target_labels=[0, 1, 2, 3],
-                             patch_size=7, patch_step=1,
+                             patch_size=7, patch_step=1, phase_name='PV',
                              save_path='/home/give/Documents/dataset/ICPR2018/BoVW-SparseCoding/data.mat', return_flag=False):
     patches = []
     labeles = []
@@ -109,8 +109,9 @@ def extract_patches_multidir(data_dir, subclasses=['train', 'val', 'test'], targ
             cur_data_dir = os.path.join(data_dir, subclass)
             cur_patches, cur_coding_labels, cur_labeles = extract_patches_singledir(cur_data_dir, str(target_label),
                                                                                     patch_size=patch_size,
+                                                                                    phase_name=phase_name,
                                                                                     patch_step=patch_step,
-                                                                                    save_dir=None, multiprocess=8)
+                                                                                    multiprocess=8)
             patches.extend(cur_patches)
             coding_labeles.extend(cur_coding_labels)
             labeles.extend(cur_labeles)
@@ -132,8 +133,11 @@ def extract_patches_multidir(data_dir, subclasses=['train', 'val', 'test'], targ
         scio.savemat(save_path, save_dict)
 
 if __name__ == '__main__':
-    extract_patches_multidir('/home/give/Documents/dataset/MedicalImage/MedicalImage/SL_TrainAndVal/ICIP',
-                             save_path='/home/give/Documents/dataset/ICPR2018/BoVW/data.mat')
+    for phase_name in ['NC', 'ART', 'PV']:
+        extract_patches_multidir('/home/give/Documents/dataset/MICCAI2018/Slices/un-crossvalidation',
+                                 phase_name=phase_name,
+                                 save_path='/home/give/Documents/dataset/MICCAI2018/Patches/LearningBased/BoVW-Yang/data_' + phase_name + '.mat')
+
     # data = scio.loadmat('/home/give/Documents/dataset/ICPR2018/BoVW-SparseCoding/data.mat')
     # for key in data.keys():
     #     print np.shape(data[key])

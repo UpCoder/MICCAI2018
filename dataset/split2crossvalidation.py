@@ -91,10 +91,10 @@ def statics_in_dirs(dir_path):
         )
 
 if __name__ == '__main__':
-    names = read_all_names('/home/give/Documents/dataset/MICCAI2018/Slices/un-crossvalidation')
-    print len(names)
-    split_random(names, '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/train',
-                 '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/val',
-                 '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/test')
+    # names = read_all_names('/home/give/Documents/dataset/MICCAI2018/Slices/un-crossvalidation')
+    # print len(names)
+    # split_random(names, '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/train',
+    #              '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/val',
+    #              '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/test')
 
-    statics_in_dirs('/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1')
+    statics_in_dirs('/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/0')

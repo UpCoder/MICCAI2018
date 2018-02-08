@@ -1,0 +1,7 @@
+label is 1, error number is 8, all number is 29, acc is 0.724138
+error record　is  [2, 2, 2, 2, 2, 2, 2, 2]
+label is 2, error number is 5, all number is 27, acc is 0.814815
+error record　is  [0, 1, 3, 1, 1]
+label is 3, error number is 1, all number is 24, acc is 0.958333
+error record　is  [1]
+accuracy is  0.865384615385

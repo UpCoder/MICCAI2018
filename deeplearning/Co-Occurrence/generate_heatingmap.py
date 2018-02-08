@@ -14,7 +14,7 @@ phasenames=['NC', 'ART', 'PV']
 mhd_adjust = False
 
 
-model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0'
+model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/1'
 divided_liver = False
 global_step = tf.get_variable('global_step', [],
                               initializer=tf.constant_initializer(0),
@@ -307,7 +307,7 @@ def generate_heatmap_version2(data_path, pointed_phase_index, patch_size, save_p
 
 
 if __name__ == '__main__':
-    crossid = 0
+    crossid = 1
     for subclass in ['test', 'train', 'val']:
         sub_features = []
         sub_labels = []

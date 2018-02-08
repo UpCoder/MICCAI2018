@@ -1,7 +1,7 @@
 # -*- coding=utf-8 -*-
 from resnet import *
 import tensorflow as tf
-from utils.Tools import changed_shape, calculate_acc_error, acc_binary_acc, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
+from utils.Tools import calculate_acc_error, shuffle_image_label, read_mhd_image, get_boundingbox, convert2depthlaster
 from glob import glob
 import shutil
 import scipy.io as scio

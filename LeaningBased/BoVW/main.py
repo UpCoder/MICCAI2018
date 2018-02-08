@@ -2,6 +2,7 @@ import os
 import numpy as np
 from ExtractPatches import extract_patches_multidir
 from utils.Tools import calculate_acc_error
+from glob import glob
 
 def cal_distance(patches, center):
     '''
@@ -25,12 +26,13 @@ def load_vocabulary(data_dir):
     return np.load(data_dir)
 
 
-def generate_representor(data_dir, dictionary_path, subclass):
+def generate_representor(data_dir, dictionary_path, subclass, phase_name):
     dictionary = load_vocabulary(dictionary_path)
     shape_vocabulary = np.shape(dictionary)
     vocabulary_size = shape_vocabulary[0]
     representers = []
-    patches, coding_labeles, labeles = extract_patches_multidir(data_dir, subclasses=[subclass], return_flag=True)
+    patches, coding_labeles, labeles = extract_patches_multidir(data_dir, subclasses=[subclass], return_flag=True,
+                                                                phase_name=phase_name)
     all_patches = []
     counts = []
     for case_index, cur_patches in enumerate(patches):
@@ -47,25 +49,11 @@ def generate_representor(data_dir, dictionary_path, subclass):
             cur_case_representor[0, min_index] += 1
         representers.append(cur_case_representor.squeeze())
         start += count
-        # patches_coding_labeles = {}
-        # for patch_index, cur_patch in enumerate(cur_patches):
-        #     cur_coding_label = coding_labeles[case_index][patch_index]
-        #     if cur_coding_label not in patches_coding_labeles.keys():
-        #         patches_coding_labeles[cur_coding_label] = []
-        #     patches_coding_labeles[cur_coding_label].append(cur_patch)
-        # for key in patches_coding_labeles.keys():
-        #     cur_patches_coding_label = patches_coding_labeles[key]
-        #     cur_vocabulary = vocabulary_dict[key]
-        #     distance_arr = cal_distance(cur_patches_coding_label, cur_vocabulary)
-        #     for i in range(len(distance_arr)):
-        #         min_index = np.argmin(distance_arr[i])
-        #         cur_case_representor[int(key), min_index] += 1
-        # representers.append(cur_case_representor.flatten())
     return representers, labeles
 
 
 def execute_classify(train_features, train_labels, val_features, val_labels, test_features, test_labels):
-    from LeaningBased.BoVW_DualDict.classification import SVM, LinearSVM, KNN
+    from LeaningBased.classification import SVM, LinearSVM, KNN
     predicted_label, c_params, g_params, max_c, max_g, accs = SVM.do(train_features, train_labels, val_features,
                                                                      val_labels,
                                                                      adjust_parameters=True)
@@ -112,10 +100,54 @@ def generate_representor_multidir(data_dir, patch_dir, reload=None):
     return acc
 
 
+def generate_representor_multidir_multiphase(data_dir, dictionary_dir):
+    def concatenate(all, will_add):
+        if all is None:
+            all = will_add
+        else:
+            all = np.concatenate((all, will_add), axis=1)
+        return all
+    train_features = None
+    train_labels = None
+    val_features = None
+    val_labels = None
+    test_features = None
+    test_labels = None
+    # phase_names = ['ART', 'PV']
+    phase_names = ['PV']
+    for phase_name in phase_names:
+        dictionary_path = glob(os.path.join(dictionary_dir, phase_name+"*.npy"))[0]
+        train_features_singlephsae, train_labels_singlephase = generate_representor(data_dir, dictionary_path,
+                                                                                    subclass='train', phase_name=phase_name)
+        val_features_singlephsae, val_labels_singlephase = generate_representor(data_dir, dictionary_path,
+                                                                                subclass='val', phase_name=phase_name)
+        test_features_singlephsae, test_labels_singlephase = generate_representor(data_dir, dictionary_path,
+                                                                                  subclass='test', phase_name=phase_name)
+        train_features = concatenate(train_features, train_features_singlephsae)
+        val_features = concatenate(val_features, val_features_singlephsae)
+        test_features = concatenate(test_features, test_features_singlephsae)
+        if train_labels is None:
+            train_labels = train_labels_singlephase
+        else:
+            if np.sum(np.not_equal(train_labels, train_labels_singlephase)) != 0:
+                print train_labels
+                print train_labels_singlephase
+                print 'Error, not equal'
+        if val_labels is None:
+            val_labels = val_labels_singlephase
+        if test_labels is None:
+            test_labels = test_labels_singlephase
+    print 'before execute_classify, the shape of train_features is ', np.shape(
+        train_features), ', the shape of val_features is ', np.shape(
+        val_features), ', the shape of test_featrues is ', np.shape(test_features)
+    acc = execute_classify(train_features, train_labels, val_features, val_labels, test_features, test_labels)
+    print acc
+    return train_features, train_labels, val_features, val_labels, test_features, test_labels
+
+
 if __name__ == '__main__':
-    generate_representor_multidir(
-        patch_dir='/home/give/PycharmProjects/ICPR2018/LeaningBased/BoVW/dictionary.npy',
-        data_dir='/home/give/Documents/dataset/MedicalImage/MedicalImage/SL_TrainAndVal/ICIP',
-        reload=True
+    generate_representor_multidir_multiphase(
+        data_dir='/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/0',
+        dictionary_dir='/home/give/PycharmProjects/MICCAI2018/LeaningBased/BoVW/dictionary'
     )
 

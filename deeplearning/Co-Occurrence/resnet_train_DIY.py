@@ -11,14 +11,16 @@ import sys
 loss_local_coefficient = 0.0
 loss_global_coefficient = 0.0
 loss_all_coefficient = 1.0
-_lambda = 0.0001
+_lambda = 0.00
+_alpha = 0.2
+category_num = 4
 MOMENTUM = 0.9
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/tmp/resnet_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0',
+tf.app.flags.DEFINE_string('load_model_path', '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/1',
                            '''the model reload path''')
 tf.app.flags.DEFINE_string('save_model_path', './models', 'the saving path of the model')
 tf.app.flags.DEFINE_string('log_dir', './log/train',
@@ -305,8 +307,6 @@ class DataSet:
                 cur_rois_images = DataSet.resize_images(cur_rois_images, net_config.EXPAND_SIZE_W, self.rescale)
                 yield cur_patches_images, cur_rois_images, cur_labels
 
-_alpha = 0.1
-category_num = 4
 
 def update_centers(centers, data, labels, category_num):
     '''
@@ -347,7 +347,7 @@ def calculate_centerloss(x_tensor, label_tensor, centers_tensor):
 
 
 def train(logits, local_output_tensor, global_output_tensor, represent_feature_tensor, images_tensor, expand_images_tensor, labels_tensor, is_training_tensor, save_model_path=None, step_width=100, record_loss=False):
-    cross_id = 0
+    cross_id = 1
     has_centerloss = True
     patches_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation'
     roi_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation'

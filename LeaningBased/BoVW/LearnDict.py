@@ -36,4 +36,7 @@ def learn_dict(patch_path, limited, dict_size, dict_save_path):
 
 
 if __name__ == '__main__':
-    learn_dict('/home/give/Documents/dataset/ICPR2018/BoVW/data.mat', 30000, 128, './dictionary-128-30000.npy')
+    for phase_name in ['NC', 'ART']:
+        learn_dict(
+            '/home/give/Documents/dataset/MICCAI2018/Patches/LearningBased/BoVW-Yang/data_' + phase_name + '.mat',
+            30000, 128, './dictionary/' + phase_name + '-128-30000.npy')

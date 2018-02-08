@@ -131,7 +131,7 @@ def main(_):
         is_training=is_training_tensor,
         batch_size=batch_size_tensor
         )
-    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/0'
+    model_path = '/home/give/PycharmProjects/MICCAI2018/deeplearning/Co-Occurrence/parameters/1'
     # model_path = '/home/give/PycharmProjects/MedicalImage/Net/forpatch/cross_validation/model/multiscale/parallel/0/2200.0'
     predictions = tf.nn.softmax(logits)
     saver = tf.train.Saver(tf.all_variables())
@@ -150,8 +150,8 @@ def main(_):
     print "resume", latest
     saver.restore(sess, latest)
 
-    data_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation/0/test'
-    slice_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/0/test'
+    data_dir = '/home/give/Documents/dataset/MICCAI2018/Patches/crossvalidation/1/test'
+    slice_dir = '/home/give/Documents/dataset/MICCAI2018/Slices/crossvalidation/1/test'
     labels = []
     paths = []
     for typeid in [0, 1, 2, 3]:
